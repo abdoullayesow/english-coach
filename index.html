@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Coach AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12;
+    --surface: #12121e;
+    --surface2: #1a1a2e;
+    --border: #2a2a45;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --accent3: #43e97b;
+    --text: #e8e8f0;
+    --text-muted: #7878a0;
+    --gold: #ffd700;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108,99,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(255,101,132,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 60% 40%, rgba(67,233,123,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    padding: 40px 20px 30px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #6c63ff 0%, #ff6584 50%, #43e97b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+
+  .tagline {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-style: italic;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  /* XP BAR */
+  .xp-bar-wrap {
+    margin: 16px auto;
+    max-width: 400px;
+    background: var(--surface2);
+    border-radius: 20px;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .xp-label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+  .xp-track { flex: 1; height: 8px; background: var(--border); border-radius: 10px; overflow: hidden; }
+  .xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    width: 0%;
+  }
+  .xp-points { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem; color: var(--gold); white-space: nowrap; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .tab:hover { color: var(--text); background: var(--surface2); }
+
+  .tab.active {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    color: white;
+    box-shadow: 0 4px 20px rgba(108,99,255,0.4);
+  }
+
+  .tab-icon { font-size: 1.1rem; }
+
+  /* PANELS */
+  .panel { display: none; animation: fadeIn 0.3s ease; }
+  .panel.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* CHAT */
+  .chat-messages {
+    min-height: 300px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-right: 4px;
+    margin-bottom: 16px;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg {
+    max-width: 82%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    animation: msgIn 0.3s ease;
+  }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: scale(0.95) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .msg.ai {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    align-self: flex-start;
+  }
+
+  .msg.user {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border-bottom-right-radius: 4px;
+    align-self: flex-end;
+    color: white;
+  }
+
+  .msg-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .correction-badge {
+    display: inline-block;
+    background: rgba(255,101,132,0.15);
+    border: 1px solid rgba(255,101,132,0.4);
+    color: var(--accent2);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+  }
+
+  .translation-badge {
+    display: inline-block;
+    background: rgba(67,233,123,0.1);
+    border: 1px solid rgba(67,233,123,0.3);
+    color: var(--accent3);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+  }
+
+  /* INPUT ROW */
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  textarea, input[type="text"] {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus, input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+  }
+
+  textarea { min-height: 52px; max-height: 140px; }
+
+  .btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108,99,255,0.35);
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(108,99,255,0.5); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+
+  .btn-sm { padding: 8px 14px; font-size: 0.8rem; border-radius: 10px; }
+
+  /* READING */
+  .text-display {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    line-height: 1.8;
+    font-size: 0.95rem;
+    min-height: 160px;
+    position: relative;
+  }
+
+  .text-display .word {
+    display: inline;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s;
+    padding: 1px 2px;
+  }
+
+  .text-display .word:hover {
+    background: rgba(108,99,255,0.25);
+    color: white;
+  }
+
+  .tooltip {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    color: var(--text);
+    z-index: 1000;
+    pointer-events: none;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    max-width: 220px;
+    display: none;
+  }
+
+  /* WRITING */
+  .writing-prompt {
+    background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(139,92,246,0.05));
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .writing-prompt strong { color: var(--accent); font-style: normal; }
+
+  .writing-feedback {
+    margin-top: 14px;
+    padding: 16px;
+    background: var(--surface2);
+    border-radius: 14px;
+    border-left: 3px solid var(--accent3);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    display: none;
+  }
+
+  /* VOCABULARY */
+  .vocab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .vocab-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .vocab-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .vocab-card:hover::before { opacity: 0.07; }
+  .vocab-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+  .vocab-word {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+  }
+
+  .vocab-translation {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: none;
+  }
+
+  .vocab-card.revealed .vocab-translation { display: block; color: var(--accent3); }
+  .vocab-card.revealed { border-color: var(--accent3); }
+
+  /* LEVEL SELECTOR */
+  .level-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .pill {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .pill:hover { border-color: var(--accent); color: var(--text); }
+  .pill.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* SCORE BADGE */
+  .score-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .score-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    text-align: center;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .score-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .score-lbl { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+  /* LOADER */
+  .loader {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 8px 0;
+  }
+
+  .loader span {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .loader span:nth-child(2) { animation-delay: 0.2s; background: var(--accent2); }
+  .loader span:nth-child(3) { animation-delay: 0.4s; background: var(--accent3); }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+    40% { transform: translateY(-8px); opacity: 1; }
+  }
+
+  /* TOPIC SELECTOR */
+  .topic-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 12px;
+  }
+
+  .topic-select:focus { border-color: var(--accent); }
+
+  /* NOTIFICATION */
+  .notif {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--surface);
+    border: 1px solid var(--accent3);
+    border-radius: 14px;
+    padding: 12px 20px;
+    font-size: 0.85rem;
+    color: var(--accent3);
+    z-index: 9999;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    max-width: 260px;
+  }
+
+  .notif.show { transform: translateY(0); opacity: 1; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .tab span.tab-text { display: none; }
+    .tab-icon { font-size: 1.3rem; }
+    .card { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="logo">🇬🇧 English Coach AI</div>
+    <div class="tagline">Ton professeur d'anglais personnel, disponible 24h/24</div>
+    <div class="xp-bar-wrap">
+      <span class="xp-label">Niveau <b id="levelNum">1</b></span>
+      <div class="xp-track"><div class="xp-fill" id="xpFill"></div></div>
+      <span class="xp-points" id="xpPoints">0 XP</span>
+    </div>
+  </header>
+
+  <div class="score-row">
+    <div class="score-item"><div class="score-num" id="statConv">0</div><div class="score-lbl">Conversations</div></div>
+    <div class="score-item"><div class="score-num" id="statWrite">0</div><div class="score-lbl">Exercices écrits</div></div>
+    <div class="score-item"><div class="score-num" id="statVocab">0</div><div class="score-lbl">Mots appris</div></div>
+    <div class="score-item"><div class="score-num" id="statRead">0</div><div class="score-lbl">Textes lus</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('conversation')">
+      <span class="tab-icon">💬</span><span class="tab-text">Conversation</span>
+    </button>
+    <button class="tab" onclick="showTab('reading')">
+      <span class="tab-icon">📖</span><span class="tab-text">Lecture</span>
+    </button>
+    <button class="tab" onclick="showTab('writing')">
+      <span class="tab-icon">✍️</span><span class="tab-text">Écriture</span>
+    </button>
+    <button class="tab" onclick="showTab('vocabulary')">
+      <span class="tab-icon">📚</span><span class="tab-text">Vocabulaire</span>
+    </button>
+  </div>
+
+  <!-- CONVERSATION TAB -->
+  <div id="tab-conversation" class="panel active">
+    <div class="card">
+      <div class="card-title">💬 Parle avec ton coach anglais</div>
+
+      <div class="level-pills">
+        <button class="pill active" onclick="setLevel('beginner', this)">🌱 Débutant</button>
+        <button class="pill" onclick="setLevel('intermediate', this)">⚡ Intermédiaire</button>
+        <button class="pill" onclick="setLevel('advanced', this)">🔥 Avancé</button>
+      </div>
+
+      <select class="topic-select" id="topicSelect">
+        <option value="daily life">🏠 Vie quotidienne</option>
+        <option value="travel">✈️ Voyages</option>
+        <option value="work">💼 Travail & Business</option>
+        <option value="food">🍕 Nourriture</option>
+        <option value="sports">⚽ Sports</option>
+        <option value="technology">💻 Technologie</option>
+        <option value="movies and music">🎬 Films & Musique</option>
+        <option value="free conversation">🗣️ Conversation libre</option>
+      </select>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg ai">
+          Hello! 👋 I'm your English coach. I'll help you speak, read and write in English fluently.<br><br>
+          <em>Type anything in English or French — I'll understand and help you improve!</em>
+          <div class="translation-badge">🇫🇷 Traduction disponible sur demande</div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <textarea id="chatInput" placeholder="Type in English or French... (Écris en anglais ou en français)" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        <button class="btn btn-primary" onclick="sendChat()" id="sendBtn">Envoyer →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- READING TAB -->
+  <div id="tab-reading" class="panel">
+    <div class="card">
+      <div class="card-title">📖 Lecture interactive</div>
+
+      <div class="level-pills">
+        <button class="pill active" onclick="setReadLevel('A1', this)">A1</button>
+        <button class="pill" onclick="setReadLevel('A2', this)">A2</button>
+        <button class="pill" onclick="setReadLevel('B1', this)">B1</button>
+        <button class="pill" onclick="setReadLevel('B2', this)">B2</button>
+        <button class="pill" onclick="setReadLevel('C1', this)">C1</button>
+      </div>
+
+      <select class="topic-select" id="readTopicSelect">
+        <option value="daily life story">Histoire du quotidien</option>
+        <option value="travel adventure">Aventure de voyage</option>
+        <option value="science discovery">Découverte scientifique</option>
+        <option value="historical event">Événement historique</option>
+        <option value="business article">Article business</option>
+        <option value="short story">Nouvelle courte</option>
+      </select>
+
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn btn-primary" onclick="generateText()" id="genTextBtn">📝 Générer un texte</button>
+        <button class="btn btn-secondary btn-sm" onclick="translateAll()">🇫🇷 Tout traduire</button>
+      </div>
+
+      <div class="text-display" id="readingText">
+        <span style="color:var(--text-muted);font-style:italic;">Clique sur "Générer un texte" pour commencer la lecture.<br><br>💡 <strong>Astuce :</strong> Clique sur n'importe quel mot pour voir sa traduction !</span>
+      </div>
+
+      <div id="readingQuestions" style="margin-top:14px;display:none;">
+        <div class="card-title" style="margin-top:10px;">❓ Questions de compréhension</div>
+        <div id="questionsContent"></div>
+        <div class="input-row" style="margin-top:10px;">
+          <textarea id="readAnswer" placeholder="Write your answer in English..." rows="2"></textarea>
+          <button class="btn btn-primary btn-sm" onclick="checkReadAnswer()">Vérifier</button>
+        </div>
+        <div id="readFeedback" class="writing-feedback"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WRITING TAB -->
+  <div id="tab-writing" class="panel">
+    <div class="card">
+      <div class="card-title">✍️ Exercices d'écriture</div>
+
+      <div class="level-pills">
+        <button class="pill active" onclick="setWriteLevel('beginner', this)">🌱 Débutant</button>
+        <button class="pill" onclick="setWriteLevel('intermediate', this)">⚡ Intermédiaire</button>
+        <button class="pill" onclick="setWriteLevel('advanced', this)">🔥 Avancé</button>
+      </div>
+
+      <select class="topic-select" id="writeTypeSelect">
+        <option value="describe your day">Décris ta journée</option>
+        <option value="write an email">Écrire un email</option>
+        <option value="opinion paragraph">Paragraphe d'opinion</option>
+        <option value="story continuation">Continuer une histoire</option>
+        <option value="describe a picture">Décrire une image</option>
+        <option value="letter to a friend">Lettre à un ami</option>
+      </select>
+
+      <button class="btn btn-secondary btn-sm" onclick="newWritingPrompt()" id="newPromptBtn" style="margin-bottom:12px;">🎲 Nouveau sujet</button>
+
+      <div class="writing-prompt" id="writingPrompt">
+        Clique sur "Nouveau sujet" pour obtenir un exercice d'écriture !
+      </div>
+
+      <textarea id="writingArea" placeholder="Write your answer here in English... Minimum 3 sentences." rows="6" style="width:100%;margin-bottom:12px;"></textarea>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="submitWriting()" id="submitWriteBtn">✅ Corriger mon texte</button>
+        <button class="btn btn-secondary btn-sm" onclick="getWritingHint()">💡 Aide</button>
+      </div>
+
+      <div class="writing-feedback" id="writingFeedback"></div>
+    </div>
+  </div>
+
+  <!-- VOCABULARY TAB -->
+  <div id="tab-vocabulary" class="panel">
+    <div class="card">
+      <div class="card-title">📚 Vocabulaire du jour</div>
+
+      <select class="topic-select" id="vocabTopicSelect">
+        <option value="everyday objects">Objets du quotidien</option>
+        <option value="emotions and feelings">Émotions & Sentiments</option>
+        <option value="travel vocabulary">Vocabulaire voyage</option>
+        <option value="food and cooking">Cuisine & Nourriture</option>
+        <option value="work and career">Travail & Carrière</option>
+        <option value="technology">Technologie</option>
+        <option value="nature and environment">Nature & Environnement</option>
+        <option value="body and health">Corps & Santé</option>
+      </select>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn btn-primary" onclick="loadVocab()" id="loadVocabBtn">🔄 Charger le vocabulaire</button>
+        <button class="btn btn-secondary btn-sm" onclick="revealAll()">👁️ Tout révéler</button>
+      </div>
+
+      <div class="vocab-grid" id="vocabGrid">
+        <div style="color:var(--text-muted);font-style:italic;grid-column:1/-1;padding:20px 0;">
+          Clique sur "Charger le vocabulaire" pour commencer !
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎯 Exercice flash</div>
+      <div id="flashcardArea">
+        <div style="color:var(--text-muted);font-style:italic;">Charge d'abord le vocabulaire ci-dessus.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="wordTooltip"></div>
+<!-- Notification -->
+<div class="notif" id="notif"></div>
+
+<!-- API KEY SETUP OVERLAY -->
+<div id="setupOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,5,15,0.95);z-index:99999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#12121e;border:1px solid #6c63ff;border-radius:24px;padding:36px 28px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:2.5rem;margin-bottom:10px;">&#128273;</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:#e8e8f0;">Configuration requise</div>
+      <div style="color:#7878a0;font-size:0.88rem;margin-top:6px;">Connecte ton compte Google AI pour utiliser l'app gratuitement</div>
+    </div>
+    <div style="background:#1a1a2e;border-radius:14px;padding:18px;margin-bottom:20px;border:1px solid #2a2a45;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;color:#43e97b;font-size:0.9rem;margin-bottom:12px;">Comment obtenir ta cle gratuite :</div>
+      <ol style="color:#b0b0c8;font-size:0.83rem;line-height:1.9;padding-left:18px;">
+        <li>Va sur <strong style="color:#6c63ff;">aistudio.google.com</strong></li>
+        <li>Connecte-toi avec ton compte Google</li>
+        <li>Clique sur <strong>"Get API key"</strong> en haut a gauche</li>
+        <li>Clique <strong>"Create API key"</strong></li>
+        <li>Copie la cle et colle-la ici</li>
+      </ol>
+    </div>
+    <div style="margin-bottom:8px;">
+      <input type="password" id="apiKeyInput" placeholder="AIzaSy..." style="width:100%;background:#0a0a12;border:1px solid #2a2a45;color:#e8e8f0;border-radius:12px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:0.92rem;outline:none;" onfocus="this.style.borderColor='#6c63ff'" onblur="this.style.borderColor='#2a2a45'">
+    </div>
+    <div id="apiKeyError" style="color:#ff6584;font-size:0.8rem;min-height:20px;margin-bottom:12px;"></div>
+    <button onclick="saveApiKey()" style="width:100%;padding:14px;background:linear-gradient(135deg,#6c63ff,#8b5cf6);border:none;border-radius:14px;color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;">
+      Commencer l'apprentissage
+    </button>
+    <div style="text-align:center;margin-top:14px;color:#7878a0;font-size:0.75rem;">
+      Ta cle est sauvegardee uniquement sur ton appareil, jamais envoyee ailleurs.<br>
+      Gratuit jusqu'a 1500 requetes/jour avec Google AI Free Tier.
+    </div>
+    <div style="text-align:center;margin-top:16px;">
+      <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#6c63ff;font-size:0.82rem;text-decoration:none;border-bottom:1px solid rgba(108,99,255,0.4);padding-bottom:1px;">
+        Ouvrir Google AI Studio
+      </a>
+    </div>
+  </div>
+</div>
+
+<button onclick="resetApiKey()" style="position:fixed;bottom:20px;left:20px;background:#1a1a2e;border:1px solid #2a2a45;color:#7878a0;border-radius:10px;padding:8px 14px;font-size:0.75rem;cursor:pointer;z-index:100;font-family:'DM Sans',sans-serif;" title="Changer la cle API">
+  Cle API
+</button>
+
+<script>
+// === API KEY SETUP ===
+let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
+
+function showSetupIfNeeded() {
+  if (!GEMINI_API_KEY) {
+    document.getElementById('setupOverlay').style.display = 'flex';
+  }
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('AIza')) {
+    document.getElementById('apiKeyError').textContent = '⚠️ Clé invalide. Elle doit commencer par "AIza..."';
+    return;
+  }
+  GEMINI_API_KEY = key;
+  localStorage.setItem('gemini_api_key', key);
+  document.getElementById('setupOverlay').style.display = 'none';
+  notify('✅ Clé API sauvegardée !');
+}
+
+function resetApiKey() {
+  localStorage.removeItem('gemini_api_key');
+  GEMINI_API_KEY = '';
+  document.getElementById('apiKeyInput').value = '';
+  document.getElementById('apiKeyError').textContent = '';
+  document.getElementById('setupOverlay').style.display = 'flex';
+}
+
+window.addEventListener('load', showSetupIfNeeded);
+
+// === STATE ===
+let xp = 0;
+let level = 1;
+let stats = { conv: 0, write: 0, vocab: 0, read: 0 };
+let userLevel = 'beginner';
+let readLevel = 'A1';
+let writeLevel = 'beginner';
+let chatHistory = [];
+let currentVocab = [];
+let flashIndex = 0;
+let currentReadingText = '';
+let currentQuestion = '';
+
+// === XP SYSTEM ===
+function addXP(amount, reason) {
+  xp += amount;
+  const maxXP = level * 100;
+  if (xp >= maxXP) { xp -= maxXP; level++; notify(`🎉 Niveau ${level} atteint ! +${amount} XP`); }
+  else { notify(`+${amount} XP — ${reason}`); }
+  document.getElementById('xpPoints').textContent = xp + ' XP';
+  document.getElementById('levelNum').textContent = level;
+  document.getElementById('xpFill').style.width = (xp / (level * 100) * 100) + '%';
+}
+
+// === TABS ===
+function showTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// === LEVELS ===
+function setLevel(l, el) {
+  userLevel = l;
+  document.querySelectorAll('#tab-conversation .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+function setReadLevel(l, el) {
+  readLevel = l;
+  document.querySelectorAll('#tab-reading .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+function setWriteLevel(l, el) {
+  writeLevel = l;
+  document.querySelectorAll('#tab-writing .pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// === NOTIFY ===
+function notify(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 2800);
+}
+
+// === API CALL (Gemini gratuit) ===
+async function callClaude(systemPrompt, userMessage, history = []) {
+  const contents = [];
+  for (const msg of history) {
+    contents.push({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    });
+  }
+  contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
+      })
+    }
+  );
+  const data = await res.json();
+  if (data.error) {
+    if (data.error.status === 'INVALID_ARGUMENT' || data.error.status === 'PERMISSION_DENIED') {
+      document.getElementById('setupOverlay').style.display = 'flex';
+      document.getElementById('apiKeyError').textContent = '⚠️ Clé API invalide ou expirée. Saisis-la à nouveau.';
+    }
+    throw new Error(data.error.message);
+  }
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, an error occurred.';
+}
+
+// === CHAT ===
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  addUserMessage(msg);
+  input.value = '';
+  input.style.height = 'auto';
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+
+  const loaderId = addLoader();
+  chatHistory.push({ role: 'user', content: msg });
+
+  const topic = document.getElementById('topicSelect').value;
+  const system = `You are a warm, encouraging English language coach for French speakers. 
+The user's English level is: ${userLevel}.
+Current conversation topic: ${topic}.
+
+Your role:
+1. ALWAYS respond in English (this is the learning target).
+2. Keep responses short and natural (2-4 sentences max for beginner, more for advanced).
+3. After responding naturally, add a section starting with "---" containing:
+   - 🇫🇷 Brief French translation of your main message (1-2 sentences)
+   - ✅ One grammar/vocabulary correction if the user made errors (otherwise praise them)
+   - 💡 One useful vocabulary tip or phrase related to the topic
+4. Adapt difficulty to the user's level: ${userLevel}
+5. Be encouraging and friendly. Use emojis sparingly.
+6. If the user writes in French, respond to what they meant but gently remind them to practice English.`;
+
+  try {
+    const reply = await callClaude(system, msg, chatHistory.slice(-8));
+    removeLoader(loaderId);
+    chatHistory.push({ role: 'assistant', content: reply });
+
+    const [mainPart, extraPart] = reply.split('---');
+    addAIMessage(mainPart.trim(), extraPart?.trim());
+
+    stats.conv++;
+    document.getElementById('statConv').textContent = stats.conv;
+    addXP(15, 'Conversation en anglais');
+  } catch (e) {
+    removeLoader(loaderId);
+    addAIMessage('Oops! Something went wrong. Please try again. 😅');
+  }
+
+  btn.disabled = false;
+}
+
+function addUserMessage(text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addAIMessage(text, extra) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = text.replace(/\n/g, '<br>');
+  if (extra) {
+    const lines = extra.split('\n').filter(l => l.trim());
+    lines.forEach(line => {
+      if (line.startsWith('🇫🇷')) {
+        const badge = document.createElement('div');
+        badge.className = 'translation-badge';
+        badge.textContent = line;
+        div.appendChild(badge);
+      } else if (line.startsWith('✅') || line.startsWith('💡')) {
+        const badge = document.createElement('div');
+        badge.className = 'correction-badge';
+        badge.textContent = line;
+        div.appendChild(badge);
+      }
+    });
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addLoader() {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'loader-' + Date.now();
+  div.innerHTML = '<div class="loader"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div.id;
+}
+
+function removeLoader(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// === READING ===
+async function generateText() {
+  const btn = document.getElementById('genTextBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Génération...';
+
+  const topic = document.getElementById('readTopicSelect').value;
+  const system = `You are an English teacher creating reading material. Generate a short, engaging text in English.
+Requirements:
+- Level: ${readLevel} (CEFR)
+- Topic: ${topic}
+- Length: 100-180 words
+- Use vocabulary appropriate for ${readLevel}
+- Make it interesting and culturally rich
+- Return ONLY the text, no titles, no explanations.`;
+
+  try {
+    const text = await callClaude(system, `Write a ${readLevel} level text about ${topic}`);
+    currentReadingText = text;
+    makeInteractiveText(text);
+
+    stats.read++;
+    document.getElementById('statRead').textContent = stats.read;
+    addXP(20, 'Texte lu');
+
+    // Generate question
+    await generateReadQuestion(text);
+  } catch (e) { alert('Erreur lors de la génération. Réessaie !'); }
+
+  btn.disabled = false;
+  btn.textContent = '📝 Nouveau texte';
+}
+
+function makeInteractiveText(text) {
+  const container = document.getElementById('readingText');
+  const words = text.split(/(\s+)/);
+  container.innerHTML = words.map(w => {
+    if (/\s+/.test(w)) return w;
+    const clean = w.replace(/[.,!?;:'"()]/g, '');
+    return `<span class="word" data-word="${clean}" onclick="lookupWord('${clean}', event)">${w}</span>`;
+  }).join('');
+}
+
+async function lookupWord(word, e) {
+  if (!word.trim()) return;
+  const tooltip = document.getElementById('wordTooltip');
+  tooltip.style.display = 'block';
+  tooltip.textContent = '...';
+  tooltip.style.left = (e.clientX + 10) + 'px';
+  tooltip.style.top = (e.clientY - 40) + 'px';
+
+  try {
+    const reply = await callClaude(
+      'You are a French-English dictionary. Given an English word, respond with ONLY: the French translation, pronunciation in brackets, and one example sentence. Format: "FR: [translation] | [/pronunciation/] | Ex: [sentence]". Be very concise.',
+      word
+    );
+    tooltip.textContent = reply;
+    stats.vocab++;
+    document.getElementById('statVocab').textContent = stats.vocab;
+  } catch { tooltip.textContent = 'Erreur de traduction'; }
+
+  setTimeout(() => { tooltip.style.display = 'none'; }, 4000);
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('word')) {
+    document.getElementById('wordTooltip').style.display = 'none';
+  }
+});
+
+async function translateAll() {
+  if (!currentReadingText) return;
+  const system = 'You are a French translator. Translate the given English text to French. Return only the French translation.';
+  const translation = await callClaude(system, currentReadingText);
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px;`;
+  overlay.innerHTML = `<div style="background:var(--surface);border:1px solid var(--accent);border-radius:20px;padding:28px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);margin-bottom:14px;">🇫🇷 Traduction complète</div>
+    <div style="line-height:1.8;font-size:0.92rem;">${translation}</div>
+    <button onclick="this.closest('div[style]').remove()" class="btn btn-primary" style="margin-top:20px;width:100%;">Fermer</button>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function generateReadQuestion(text) {
+  const system = 'Generate ONE simple comprehension question in English about the following text. Return ONLY the question, nothing else.';
+  const q = await callClaude(system, text);
+  currentQuestion = q;
+  document.getElementById('questionsContent').innerHTML = `<p style="font-size:0.9rem;color:var(--text);margin-bottom:8px;">${q}</p>`;
+  document.getElementById('readingQuestions').style.display = 'block';
+}
+
+async function checkReadAnswer() {
+  const ans = document.getElementById('readAnswer').value.trim();
+  if (!ans) return;
+  const fb = document.getElementById('readFeedback');
+  fb.style.display = 'block';
+  fb.innerHTML = '<div class="loader"><span></span><span></span><span></span></div>';
+
+  const system = `You are an English teacher. Evaluate this answer to a reading comprehension question.
+Question: ${currentQuestion}
+Context text: ${currentReadingText}
+Provide feedback in French, then in English. Note grammar errors if any. Be encouraging.`;
+
+  const result = await callClaude(system, ans);
+  fb.innerHTML = result.replace(/\n/g, '<br>');
+  addXP(25, 'Compréhension écrite');
+}
+
+// === WRITING ===
+let currentPrompt = '';
+
+async function newWritingPrompt() {
+  const btn = document.getElementById('newPromptBtn');
+  btn.disabled = true;
+  const type = document.getElementById('writeTypeSelect').value;
+
+  const system = `You are an English teacher. Create a writing prompt for a French student.
+Level: ${writeLevel}
+Type: ${type}
+Return a JSON object with:
+- "instruction": the task in French (what to do)  
+- "prompt": the writing prompt or scenario in English
+- "tips": 2-3 useful English words/phrases to use
+Keep it encouraging and clear.
+Return ONLY the JSON.`;
+
+  try {
+    const res = await callClaude(system, 'Give me a writing exercise');
+    const clean = res.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(clean);
+    currentPrompt = data.prompt;
+    document.getElementById('writingPrompt').innerHTML = `
+      <strong>📌 ${data.instruction}</strong><br>
+      <em style="color:var(--text);margin-top:6px;display:block;">${data.prompt}</em>
+      <div style="margin-top:8px;font-size:0.8rem;color:var(--accent3);">💡 Mots utiles : ${data.tips}</div>`;
+    document.getElementById('writingArea').value = '';
+    document.getElementById('writingFeedback').style.display = 'none';
+  } catch (e) {
+    document.getElementById('writingPrompt').innerHTML = `<strong>Error generating prompt. Try again!</strong>`;
+  }
+  btn.disabled = false;
+}
+
+async function submitWriting() {
+  const text = document.getElementById('writingArea').value.trim();
+  if (text.length < 20) { notify('✏️ Écris au moins 3 phrases !'); return; }
+
+  const btn = document.getElementById('submitWriteBtn');
+  btn.disabled = true;
+  const fb = document.getElementById('writingFeedback');
+  fb.style.display = 'block';
+  fb.innerHTML = '<div class="loader"><span></span><span></span><span></span></div>';
+
+  const system = `You are a kind, expert English teacher evaluating writing from a French learner.
+Student level: ${writeLevel}
+Writing prompt: ${currentPrompt || 'General writing exercise'}
+
+Evaluate the writing and provide:
+1. 🌟 Global score (X/10) and one sentence of overall feedback (in French)
+2. ✅ What they did well (2 points, in French)
+3. 🔧 2-3 specific corrections with explanations (show original → corrected form)
+4. 💬 A corrected/improved version of the text
+
+Be warm and encouraging. Mix French explanations with English examples.`;
+
+  const result = await callClaude(system, text);
+  fb.innerHTML = result.replace(/\n/g, '<br>');
+  stats.write++;
+  document.getElementById('statWrite').textContent = stats.write;
+  addXP(30, 'Exercice d\'écriture');
+  btn.disabled = false;
+}
+
+async function getWritingHint() {
+  if (!currentPrompt) { notify('Génère d\'abord un sujet !'); return; }
+  const system = 'You are a helpful English teacher. Give a very short hint (3-4 sentences) in French + English on how to approach this writing task. Include useful phrases.';
+  const hint = await callClaude(system, `Hint for: ${currentPrompt} (Level: ${writeLevel})`);
+  notify('💡 Aide générée !');
+  const fb = document.getElementById('writingFeedback');
+  fb.style.display = 'block';
+  fb.innerHTML = '<strong>💡 Conseil :</strong><br>' + hint.replace(/\n/g, '<br>');
+}
+
+// === VOCABULARY ===
+async function loadVocab() {
+  const btn = document.getElementById('loadVocabBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Chargement...';
+
+  const topic = document.getElementById('vocabTopicSelect').value;
+  const system = `You are an English vocabulary teacher for French speakers.
+Generate 12 English vocabulary words for the topic: "${topic}".
+Return ONLY a valid JSON array of objects like:
+[{"en":"word","fr":"traduction","example":"Example sentence in English","level":"A1"}]
+Include a mix of levels A1-B2. Return ONLY the JSON array.`;
+
+  try {
+    const res = await callClaude(system, `Vocabulary for: ${topic}`);
+    const clean = res.replace(/```json|```/g, '').trim();
+    currentVocab = JSON.parse(clean);
+
+    const grid = document.getElementById('vocabGrid');
+    grid.innerHTML = currentVocab.map((v, i) => `
+      <div class="vocab-card" onclick="this.classList.toggle('revealed')" id="vc${i}">
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">${v.level || ''}</div>
+        <div class="vocab-word">${v.en}</div>
+        <div class="vocab-translation">🇫🇷 ${v.fr}<br><em style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;display:block;">${v.example}</em></div>
+      </div>`).join('');
+
+    setupFlashcard();
+    stats.vocab += currentVocab.length;
+    document.getElementById('statVocab').textContent = stats.vocab;
+    addXP(20, 'Vocabulaire chargé');
+  } catch (e) { alert('Erreur. Réessaie !'); }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 Nouveau thème';
+}
+
+function revealAll() {
+  document.querySelectorAll('.vocab-card').forEach(c => c.classList.add('revealed'));
+}
+
+function setupFlashcard() {
+  if (!currentVocab.length) return;
+  flashIndex = 0;
+  showFlashcard();
+}
+
+function showFlashcard() {
+  const area = document.getElementById('flashcardArea');
+  if (!currentVocab.length) { area.innerHTML = '<div style="color:var(--text-muted)">Charge du vocabulaire d\'abord.</div>'; return; }
+  const v = currentVocab[flashIndex % currentVocab.length];
+  area.innerHTML = `
+    <div style="text-align:center;padding:20px 0;">
+      <div style="font-size:2rem;font-family:'Syne',sans-serif;font-weight:800;margin-bottom:12px;">${v.en}</div>
+      <div id="flashAnswer" style="display:none;animation:fadeIn 0.3s ease;">
+        <div style="color:var(--accent3);font-size:1.1rem;margin-bottom:8px;">🇫🇷 ${v.fr}</div>
+        <div style="color:var(--text-muted);font-size:0.85rem;font-style:italic;">"${v.example}"</div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('flashAnswer').style.display='block'">👁️ Voir la réponse</button>
+        <button class="btn btn-primary btn-sm" onclick="flashIndex++;showFlashcard()">➡️ Suivant</button>
+      </div>
+      <div style="color:var(--text-muted);font-size:0.75rem;margin-top:10px;">${(flashIndex % currentVocab.length) + 1} / ${currentVocab.length}</div>
+    </div>`;
+}
+</script>
+</body>
+</html>
