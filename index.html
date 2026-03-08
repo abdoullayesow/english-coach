@@ -782,7 +782,7 @@ function showSetupIfNeeded() {
 
 function saveApiKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key.startsWith('AIza')) {
+  if (!key.startsWith('gsk_')) {
     document.getElementById('apiKeyError').textContent = '⚠️ Clé invalide. Elle doit commencer par "gsk_..."';
     return;
   }
