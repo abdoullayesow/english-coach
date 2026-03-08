@@ -581,7 +581,8 @@
         <button class="pill" onclick="setLevel('advanced', this)">🔥 Avancé</button>
       </div>
 
-      <select class="topic-select" id="topicSelect">
+      <select class="topic-select" id="topicSelect" onchange="startTopicConversation()">
+        <option value="">🗣️ Choisir un thème...</option>
         <option value="daily life">🏠 Vie quotidienne</option>
         <option value="travel">✈️ Voyages</option>
         <option value="work">💼 Travail & Business</option>
@@ -595,17 +596,36 @@
       <div class="chat-messages" id="chatMessages">
         <div class="msg ai">
           Hello! 👋 I'm your English coach. I'll help you speak, read and write in English fluently.<br><br>
-          <em>Type anything in English or French — I'll understand and help you improve!</em>
-          <div class="translation-badge">🇫🇷 Traduction disponible sur demande</div>
+          <em>Choose a topic above and I'll start the conversation — or just type/speak below!</em>
+          <div class="translation-badge">🇫🇷 Choisis un thème et je commence à parler !</div>
         </div>
       </div>
 
-      <div class="input-row">
-        <textarea id="chatInput" placeholder="Type in English or French... (Écris en anglais ou en français)" rows="1"
+      <!-- Input mode toggle -->
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-secondary btn-sm" id="modeWriteBtn" onclick="setInputMode('write')" style="border-color:var(--accent);color:var(--text);">✏️ Écrire</button>
+        <button class="btn btn-secondary btn-sm" id="modeVoiceBtn" onclick="setInputMode('voice')">🎤 Parler</button>
+        <span id="voiceStatus" style="font-size:0.78rem;color:var(--text-muted);align-self:center;display:none;"></span>
+      </div>
+
+      <!-- Write mode -->
+      <div id="writeMode" class="input-row">
+        <textarea id="chatInput" placeholder="Écris en anglais ou en français..." rows="1"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
           oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
         <button class="btn btn-primary" onclick="sendChat()" id="sendBtn">Envoyer →</button>
       </div>
+
+      <!-- Voice mode -->
+      <div id="voiceMode" style="display:none;">
+        <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:14px;border:1px solid var(--border);">
+          <button id="micBtn" onclick="toggleMic()" style="width:70px;height:70px;border-radius:50%;border:3px solid var(--accent);background:var(--surface);cursor:pointer;font-size:1.8rem;transition:all 0.2s;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">🎤</button>
+          <div id="micLabel" style="font-size:0.85rem;color:var(--text-muted);">Appuie pour parler</div>
+          <div id="transcriptPreview" style="margin-top:10px;padding:10px;background:var(--surface);border-radius:10px;font-size:0.88rem;color:var(--text);min-height:36px;display:none;border:1px solid var(--border);"></div>
+          <button id="sendVoiceBtn" onclick="sendVoiceMessage()" class="btn btn-primary" style="margin-top:10px;display:none;">Envoyer ce message →</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -972,6 +992,154 @@ async function callClaude(systemPrompt, userMessage, history = []) {
     throw new Error(data.error.message);
   }
   return data.choices?.[0]?.message?.content || 'Sorry, an error occurred.';
+}
+
+// === INPUT MODE ===
+let inputMode = 'write';
+let recognition = null;
+let isListening = false;
+let voiceTranscript = '';
+
+function setInputMode(mode) {
+  inputMode = mode;
+  const writeBtn = document.getElementById('modeWriteBtn');
+  const voiceBtn = document.getElementById('modeVoiceBtn');
+  const writeDiv = document.getElementById('writeMode');
+  const voiceDiv = document.getElementById('voiceMode');
+
+  if (mode === 'write') {
+    writeBtn.style.borderColor = 'var(--accent)';
+    writeBtn.style.color = 'var(--text)';
+    voiceBtn.style.borderColor = 'var(--border)';
+    voiceBtn.style.color = 'var(--text-muted)';
+    writeDiv.style.display = 'flex';
+    voiceDiv.style.display = 'none';
+    if (isListening) stopMic();
+  } else {
+    voiceBtn.style.borderColor = 'var(--accent)';
+    voiceBtn.style.color = 'var(--text)';
+    writeBtn.style.borderColor = 'var(--border)';
+    writeBtn.style.color = 'var(--text-muted)';
+    writeDiv.style.display = 'none';
+    voiceDiv.style.display = 'block';
+    setupRecognition();
+  }
+}
+
+function setupRecognition() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    document.getElementById('voiceStatus').style.display = 'inline';
+    document.getElementById('voiceStatus').textContent = '⚠️ Micro non supporté sur ce navigateur. Utilise Chrome !';
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'en-US';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    const btn = document.getElementById('micBtn');
+    btn.style.background = 'rgba(255,101,132,0.2)';
+    btn.style.borderColor = 'var(--accent2)';
+    btn.textContent = '🔴';
+    document.getElementById('micLabel').textContent = 'En écoute... parle maintenant !';
+    document.getElementById('voiceStatus').style.display = 'inline';
+    document.getElementById('voiceStatus').textContent = "🎙️ Je t'écoute...";
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    voiceTranscript = final || interim;
+    const preview = document.getElementById('transcriptPreview');
+    preview.style.display = 'block';
+    preview.textContent = voiceTranscript;
+    if (final) {
+      document.getElementById('sendVoiceBtn').style.display = 'inline-flex';
+    }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    const btn = document.getElementById('micBtn');
+    btn.style.background = 'var(--surface)';
+    btn.style.borderColor = 'var(--accent)';
+    btn.textContent = '🎤';
+    document.getElementById('micLabel').textContent = voiceTranscript ? 'Vérifie le texte et envoie !' : 'Appuie pour réessayer';
+    document.getElementById('voiceStatus').style.display = 'none';
+  };
+
+  recognition.onerror = (e) => {
+    isListening = false;
+    document.getElementById('micLabel').textContent = 'Erreur micro. Réessaie !';
+    document.getElementById('micBtn').textContent = '🎤';
+  };
+}
+
+function toggleMic() {
+  if (!recognition) { setupRecognition(); }
+  if (isListening) {
+    stopMic();
+  } else {
+    voiceTranscript = '';
+    document.getElementById('transcriptPreview').style.display = 'none';
+    document.getElementById('sendVoiceBtn').style.display = 'none';
+    recognition.start();
+  }
+}
+
+function stopMic() {
+  if (recognition && isListening) recognition.stop();
+}
+
+function sendVoiceMessage() {
+  if (!voiceTranscript.trim()) return;
+  // Put transcript in chat input and send
+  document.getElementById('chatInput').value = voiceTranscript;
+  // Reset voice UI
+  document.getElementById('transcriptPreview').style.display = 'none';
+  document.getElementById('sendVoiceBtn').style.display = 'none';
+  document.getElementById('micLabel').textContent = 'Appuie pour parler';
+  voiceTranscript = '';
+  sendChat();
+}
+
+// === START TOPIC CONVERSATION ===
+async function startTopicConversation() {
+  const topic = document.getElementById('topicSelect').value;
+  if (!topic) return;
+
+  chatHistory = [];
+  const msgs = document.getElementById('chatMessages');
+  msgs.innerHTML = '';
+
+  const loaderId = addLoader();
+
+  const system = `You are a warm, encouraging English coach for French speakers.
+The user's level is: ${userLevel}.
+Topic: ${topic}.
+Start the conversation naturally in English with an opening question about this topic.
+Keep it short (2-3 sentences max), friendly and engaging.
+Then add "---" and below:
+- 🇫🇷 French translation of what you said
+- 💡 One key vocabulary word for this topic`;
+
+  try {
+    const reply = await callClaude(system, `Start a conversation about ${topic}`);
+    removeLoader(loaderId);
+    chatHistory.push({ role: 'assistant', content: reply });
+    const [main, extra] = reply.split('---');
+    addAIMessage(main.trim(), extra?.trim());
+  } catch(e) {
+    removeLoader(loaderId);
+    addAIMessage("Hello! Let's talk! What would you like to say? 😊");
+  }
 }
 
 // === CHAT ===
