@@ -735,20 +735,20 @@
     <div style="text-align:center;margin-bottom:24px;">
       <div style="font-size:2.5rem;margin-bottom:10px;">&#128273;</div>
       <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;color:#e8e8f0;">Configuration requise</div>
-      <div style="color:#7878a0;font-size:0.88rem;margin-top:6px;">Connecte ton compte OpenRouter pour utiliser l'app gratuitement</div>
+      <div style="color:#7878a0;font-size:0.88rem;margin-top:6px;">Connecte ton compte Groq pour utiliser l'app gratuitement</div>
     </div>
     <div style="background:#1a1a2e;border-radius:14px;padding:18px;margin-bottom:20px;border:1px solid #2a2a45;">
       <div style="font-family:'Syne',sans-serif;font-weight:700;color:#43e97b;font-size:0.9rem;margin-bottom:12px;">Comment obtenir ta cle gratuite :</div>
       <ol style="color:#b0b0c8;font-size:0.83rem;line-height:1.9;padding-left:18px;">
-        <li>Va sur <strong style="color:#6c63ff;">openrouter.ai/keys</strong></li>
-        <li>Cree un compte avec ton email</li>
-        <li>Clique sur <strong>"Keys"</strong> dans le menu</li>
-        <li>Clique <strong>"Create Key"</strong></li>
-        <li>Copie la cle (sk-or-...) et colle-la ici</li>
+        <li>Va sur <strong style="color:#6c63ff;">console.groq.com</strong></li>
+        <li>Connecte-toi avec Google ou cree un compte</li>
+        <li>Clique sur <strong>"API Keys"</strong> a gauche</li>
+        <li>Clique <strong>"Create API Key"</strong></li>
+        <li>Copie la cle (gsk_...) et colle-la ici</li>
       </ol>
     </div>
     <div style="margin-bottom:8px;">
-      <input type="password" id="apiKeyInput" placeholder="sk-or-..." style="width:100%;background:#0a0a12;border:1px solid #2a2a45;color:#e8e8f0;border-radius:12px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:0.92rem;outline:none;" onfocus="this.style.borderColor='#6c63ff'" onblur="this.style.borderColor='#2a2a45'">
+      <input type="password" id="apiKeyInput" placeholder="gsk_..." style="width:100%;background:#0a0a12;border:1px solid #2a2a45;color:#e8e8f0;border-radius:12px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:0.92rem;outline:none;" onfocus="this.style.borderColor='#6c63ff'" onblur="this.style.borderColor='#2a2a45'">
     </div>
     <div id="apiKeyError" style="color:#ff6584;font-size:0.8rem;min-height:20px;margin-bottom:12px;"></div>
     <button onclick="saveApiKey()" style="width:100%;padding:14px;background:linear-gradient(135deg,#6c63ff,#8b5cf6);border:none;border-radius:14px;color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;">
@@ -756,11 +756,11 @@
     </button>
     <div style="text-align:center;margin-top:14px;color:#7878a0;font-size:0.75rem;">
       Ta cle est sauvegardee uniquement sur ton appareil, jamais envoyee ailleurs.<br>
-      Gratuit avec le Free Tier OpenRouter.
+      Gratuit - 14 400 requetes/jour avec Groq !.
     </div>
     <div style="text-align:center;margin-top:16px;">
-      <a href="https://openrouter.ai/keys" target="_blank" style="color:#6c63ff;font-size:0.82rem;text-decoration:none;border-bottom:1px solid rgba(108,99,255,0.4);padding-bottom:1px;">
-        Ouvrir OpenRouter
+      <a href="https://console.groq.com" target="_blank" style="color:#6c63ff;font-size:0.82rem;text-decoration:none;border-bottom:1px solid rgba(108,99,255,0.4);padding-bottom:1px;">
+        Ouvrir Groq Console
       </a>
     </div>
   </div>
@@ -772,7 +772,7 @@
 
 <script>
 // === API KEY SETUP ===
-let GEMINI_API_KEY = localStorage.getItem('openrouter_api_key') || '';
+let GEMINI_API_KEY = localStorage.getItem('groq_api_key') || '';
 
 function showSetupIfNeeded() {
   if (!GEMINI_API_KEY) {
@@ -783,17 +783,17 @@ function showSetupIfNeeded() {
 function saveApiKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
   if (!key.startsWith('AIza')) {
-    document.getElementById('apiKeyError').textContent = '⚠️ Clé invalide. Elle doit commencer par "sk-or-..."';
+    document.getElementById('apiKeyError').textContent = '⚠️ Clé invalide. Elle doit commencer par "gsk_..."';
     return;
   }
   GEMINI_API_KEY = key;
-  localStorage.setItem('openrouter_api_key', key);
+  localStorage.setItem('groq_api_key', key);
   document.getElementById('setupOverlay').style.display = 'none';
   notify('✅ Clé API sauvegardée !');
 }
 
 function resetApiKey() {
-  localStorage.removeItem('openrouter_api_key');
+  localStorage.removeItem('groq_api_key');
   GEMINI_API_KEY = '';
   document.getElementById('apiKeyInput').value = '';
   document.getElementById('apiKeyError').textContent = '';
@@ -859,7 +859,7 @@ function notify(msg) {
   setTimeout(() => n.classList.remove('show'), 2800);
 }
 
-// === API CALL (OpenRouter gratuit) ===
+// === API CALL (Groq gratuit) ===
 async function callClaude(systemPrompt, userMessage, history = []) {
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -867,16 +867,14 @@ async function callClaude(systemPrompt, userMessage, history = []) {
     { role: 'user', content: userMessage }
   ];
 
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GEMINI_API_KEY}`,
-      'HTTP-Referer': window.location.href,
-      'X-Title': 'English Coach AI'
+      'Authorization': `Bearer ${GEMINI_API_KEY}`
     },
     body: JSON.stringify({
-      model: 'meta-llama/llama-3.3-8b-instruct:free',
+      model: 'llama-3.3-70b-versatile',
       messages,
       max_tokens: 1000,
       temperature: 0.7
@@ -884,10 +882,8 @@ async function callClaude(systemPrompt, userMessage, history = []) {
   });
   const data = await res.json();
   if (data.error) {
-    if (data.error.code === 401 || data.error.code === 403) {
-      document.getElementById('setupOverlay').style.display = 'flex';
-      document.getElementById('apiKeyError').textContent = 'Cle API invalide. Saisis-la a nouveau.';
-    }
+    document.getElementById('setupOverlay').style.display = 'flex';
+    document.getElementById('apiKeyError').textContent = 'Cle API invalide. Saisis-la a nouveau.';
     throw new Error(data.error.message);
   }
   return data.choices?.[0]?.message?.content || 'Sorry, an error occurred.';
