@@ -1206,7 +1206,35 @@ function addAIMessage(text, extra) {
   const msgs = document.getElementById('chatMessages');
   const div = document.createElement('div');
   div.className = 'msg ai';
-  div.innerHTML = text.replace(/\n/g, '<br>');
+
+  // Main text
+  const textDiv = document.createElement('div');
+  textDiv.innerHTML = text.replace(/\n/g, '<br>');
+  div.appendChild(textDiv);
+
+  // Speaker button
+  const speakRowDiv = document.createElement('div');
+  speakRowDiv.style.cssText = 'margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+  const speakBtnMsg = document.createElement('button');
+  speakBtnMsg.style.cssText = 'background:rgba(108,99,255,0.15);border:1px solid rgba(108,99,255,0.3);color:var(--accent);border-radius:8px;padding:4px 12px;font-size:0.75rem;cursor:pointer;font-family:"DM Sans",sans-serif;transition:all 0.2s;';
+  speakBtnMsg.textContent = '🔊 Écouter';
+  const cleanText = text.replace(/<[^>]*>/g, '').trim();
+  speakBtnMsg.onclick = () => {
+    speakWord(cleanText);
+    speakBtnMsg.textContent = '🔊 En cours...';
+    setTimeout(() => speakBtnMsg.textContent = '🔊 Écouter', cleanText.length * 60);
+  };
+  speakRowDiv.appendChild(speakBtnMsg);
+
+  // Replay slower button
+  const slowBtnMsg = document.createElement('button');
+  slowBtnMsg.style.cssText = 'background:rgba(67,233,123,0.1);border:1px solid rgba(67,233,123,0.3);color:var(--accent3);border-radius:8px;padding:4px 12px;font-size:0.75rem;cursor:pointer;font-family:"DM Sans",sans-serif;transition:all 0.2s;';
+  slowBtnMsg.textContent = '🐢 Lent';
+  slowBtnMsg.onclick = () => speakSlow(cleanText);
+  speakRowDiv.appendChild(slowBtnMsg);
+
+  div.appendChild(speakRowDiv);
+
   if (extra) {
     const lines = extra.split('\n').filter(l => l.trim());
     lines.forEach(line => {
@@ -1225,6 +1253,9 @@ function addAIMessage(text, extra) {
   }
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
+
+  // Auto-speak the AI message
+  setTimeout(() => speakWord(cleanText), 400);
 }
 
 function addLoader() {
