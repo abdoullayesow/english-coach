@@ -752,11 +752,56 @@
     </div>
 
     <div class="card">
-      <div class="card-title">🎯 Entraînement à la prononciation</div>
-      <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:14px;">Entre un mot anglais et écoute comment il se prononce, puis entraîne-toi à le répéter !</div>
+      <div class="card-title">🎯 Entraînement par son</div>
+      <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:14px;">
+        Choisis un son — Groq génère 10 mots différents à chaque fois pour t'entraîner !
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <select class="topic-select" id="trainSoundSelect">
+          <optgroup label="🔴 Voyelles">
+            <option value="/æ/ comme dans cat">🔴 /æ/ — cat, hat, bag</option>
+            <option value="/eɪ/ comme dans cake">🔴 /eɪ/ — cake, rain, day</option>
+            <option value="/ɛ/ comme dans bed">🔴 /ɛ/ — bed, red, set</option>
+            <option value="/iː/ comme dans see">🔴 /iː/ — see, eat, team</option>
+            <option value="/ɪ/ comme dans sit">🔴 /ɪ/ — sit, big, fish</option>
+            <option value="/aɪ/ comme dans bike">🔴 /aɪ/ — bike, night, fly</option>
+            <option value="/ɒ/ comme dans hot">🔴 /ɒ/ — hot, dog, stop</option>
+            <option value="/oʊ/ comme dans boat">🔴 /oʊ/ — boat, snow, go</option>
+            <option value="/ʌ/ comme dans cup">🔴 /ʌ/ — cup, run, fun</option>
+            <option value="/ɑː/ comme dans car">🔴 /ɑː/ — car, star, farm</option>
+            <option value="/aʊ/ comme dans cow">🔴 /aʊ/ — cow, out, now</option>
+            <option value="/uː/ comme dans moon">🔴 /uː/ — moon, food, blue</option>
+          </optgroup>
+          <optgroup label="🟢 Sons spéciaux">
+            <option value="/ʃ/ comme dans ship (sh)">🟢 /ʃ/ — ship, wish (sh)</option>
+            <option value="/tʃ/ comme dans chin (ch)">🟢 /tʃ/ — chin, watch (ch)</option>
+            <option value="/θ/ comme dans think (th doux)">🟢 /θ/ — think, bath (th doux)</option>
+            <option value="/ð/ comme dans the (th fort)">🟢 /ð/ — the, this (th fort)</option>
+            <option value="/ŋ/ comme dans sing (ng)">🟢 /ŋ/ — sing, ring (ng)</option>
+            <option value="/ə/ schwa comme dans about">🟢 /ə/ — about, taken (schwa)</option>
+          </optgroup>
+        </select>
+        <button class="btn btn-primary" onclick="startTraining()" id="startTrainBtn">🚀 Commencer l'entraînement</button>
+      </div>
+
+      <div id="trainingArea" style="display:none;">
+        <div id="trainingProgress" style="margin-bottom:14px;"></div>
+        <div id="trainingWord" style="text-align:center;padding:30px 20px;background:var(--surface2);border-radius:16px;border:1px solid var(--border);margin-bottom:14px;">
+        </div>
+        <div id="trainingControls" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"></div>
+        <div id="trainingFeedback" style="margin-top:14px;display:none;padding:14px;background:var(--surface2);border-radius:12px;border-left:3px solid var(--accent3);font-size:0.88rem;line-height:1.6;"></div>
+      </div>
+
+      <div id="trainingScore" style="display:none;text-align:center;padding:24px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔍 Analyser un mot</div>
+      <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:14px;">Entre n'importe quel mot — Groq t'explique exactement comment le prononcer !</div>
       <div class="input-row" style="margin-bottom:12px;">
         <input type="text" id="pronunInput" placeholder="Ex: though, through, beauty, world..." />
-        <button class="btn btn-primary" onclick="practicePronunciation()">🔊 Écouter</button>
+        <button class="btn btn-primary" onclick="practicePronunciation()">🔊 Analyser</button>
       </div>
       <div id="pronunResult" style="display:none;background:var(--surface2);border-radius:14px;padding:16px;border-left:3px solid var(--accent);font-size:0.9rem;line-height:1.7;"></div>
     </div>
@@ -1071,6 +1116,9 @@ function makeInteractiveText(text) {
     const clean = w.replace(/[.,!?;:'"()]/g, '');
     return `<span class="word" data-word="${clean}" onclick="lookupWord('${clean}', event)">${w}</span>`;
   }).join('');
+  // Show audio button
+  const sb = document.getElementById('speakBtn');
+  if (sb) sb.style.display = 'inline-flex';
 }
 
 async function lookupWord(word, e) {
@@ -1331,13 +1379,6 @@ function speakWord(word) {
   speechSynth.speak(utt);
 }
 
-// Show audio button when text is generated
-const _origMakeInteractive = makeInteractiveText;
-function makeInteractiveText(text) {
-  _origMakeInteractive(text);
-  document.getElementById('speakBtn').style.display = 'inline-flex';
-}
-
 // === PHONETICS DATA ===
 const vowelSounds = [
   { symbol: '/æ/', name: 'short a', examples: 'cat, hat, bag', color: '#ff6584' },
@@ -1418,31 +1459,191 @@ window.addEventListener('load', () => {
 
 speechSynth.onvoiceschanged = initPhonetics;
 
+// === TRAINING STATE ===
+let trainingWords = [];
+let trainingIndex = 0;
+let trainingScore = 0;
+let currentSound = '';
+let wordExplanations = {};
+
+// === START TRAINING ===
+async function startTraining() {
+  const sound = document.getElementById('trainSoundSelect').value;
+  currentSound = sound;
+  trainingWords = [];
+  trainingIndex = 0;
+  trainingScore = 0;
+  wordExplanations = {};
+
+  const btn = document.getElementById('startTrainBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Groq génère les mots...';
+
+  document.getElementById('trainingScore').style.display = 'none';
+  document.getElementById('trainingFeedback').style.display = 'none';
+
+  const system = `Tu es un professeur de phonétique anglaise pour francophones.
+Génère exactement 10 mots anglais différents qui contiennent le son ${sound}.
+Les mots doivent être variés en difficulté (mélange facile et moyen).
+Retourne UNIQUEMENT un JSON valide comme ceci :
+{"words": ["word1","word2","word3","word4","word5","word6","word7","word8","word9","word10"]}
+Rien d'autre, juste le JSON.`;
+
+  try {
+    const res = await callClaude(system, `Donne-moi 10 mots avec le son ${sound}`);
+    const clean = res.replace(/\`\`\`json|\`\`\`/g, '').trim();
+    const data = JSON.parse(clean);
+    trainingWords = data.words;
+
+    document.getElementById('trainingArea').style.display = 'block';
+    showTrainingWord();
+    addXP(5, 'Entraînement phonétique démarré');
+  } catch(e) {
+    notify('Erreur de génération. Réessaie !');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 Nouveaux mots';
+}
+
+// === SHOW WORD ===
+function showTrainingWord() {
+  if (trainingIndex >= trainingWords.length) {
+    showTrainingResults();
+    return;
+  }
+
+  const word = trainingWords[trainingIndex];
+  const progress = trainingIndex + 1;
+  const total = trainingWords.length;
+
+  // Progress bar
+  document.getElementById('trainingProgress').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="font-size:0.8rem;color:var(--text-muted);">Mot ${progress}/${total}</span>
+      <div style="flex:1;height:6px;background:var(--border);border-radius:10px;overflow:hidden;">
+        <div style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:${(progress/total)*100}%;border-radius:10px;transition:width 0.4s;"></div>
+      </div>
+      <span style="font-size:0.8rem;color:var(--gold);">Score: ${trainingScore}/${trainingIndex}</span>
+    </div>`;
+
+  // Word display
+  document.getElementById('trainingWord').innerHTML = `
+    <div style="font-size:2.5rem;font-family:'Syne',sans-serif;font-weight:800;color:var(--text);margin-bottom:8px;">${word}</div>
+    <div style="font-size:0.8rem;color:var(--text-muted);">Son étudié : <span style="color:var(--accent);">${currentSound}</span></div>`;
+
+  // Auto-speak the word
+  setTimeout(() => speakWord(word), 300);
+
+  document.getElementById('trainingFeedback').style.display = 'none';
+
+  // Controls
+  document.getElementById('trainingControls').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="speakWord('${word}')">🔊 Réécouter</button>
+    <button class="btn btn-secondary btn-sm" onclick="speakSlow('${word}')">🐢 Lent</button>
+    <button class="btn btn-primary btn-sm" onclick="explainWord('${word}')">💡 Comment prononcer ?</button>
+    <button class="btn btn-primary" onclick="nextWord(true)" style="background:linear-gradient(135deg,#43e97b,#20c997);">✅ Je sais !</button>
+    <button class="btn btn-secondary" onclick="nextWord(false)">❌ Difficile</button>`;
+}
+
+// === EXPLAIN WORD ===
+async function explainWord(word) {
+  const fb = document.getElementById('trainingFeedback');
+  fb.style.display = 'block';
+  fb.innerHTML = '<div class="loader"><span></span><span></span><span></span></div>';
+
+  if (wordExplanations[word]) {
+    fb.innerHTML = wordExplanations[word];
+    return;
+  }
+
+  const system = `Tu es un professeur de phonétique anglaise pour francophones. 
+Pour le mot anglais donné, explique en français :
+1. 🔤 Sa prononciation IPA : ex /wɜːrd/
+2. 👄 Comment le dire : décompose syllabe par syllabe avec des sons français comme référence
+3. ⚠️ Le piège pour un francophone
+4. 🔁 Dis-le comme si tu écrivais : ex "WEURDE" 
+Sois court, pratique, fun. Max 5 lignes.`;
+
+  try {
+    const reply = await callClaude(system, word);
+    const html = reply.replace(/\n/g, '<br>');
+    wordExplanations[word] = html;
+    fb.innerHTML = html;
+  } catch(e) {
+    fb.innerHTML = 'Erreur. Réessaie !';
+  }
+}
+
+// === SPEAK SLOW ===
+function speakSlow(word) {
+  stopSpeech();
+  const utt = new SpeechSynthesisUtterance(word);
+  utt.lang = 'en-US';
+  utt.rate = 0.5;
+  utt.pitch = 1;
+  const voices = speechSynth.getVoices();
+  const engVoice = voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
+  if (engVoice) utt.voice = engVoice;
+  speechSynth.speak(utt);
+}
+
+// === NEXT WORD ===
+function nextWord(knew) {
+  if (knew) trainingScore++;
+  trainingIndex++;
+  showTrainingWord();
+}
+
+// === SHOW RESULTS ===
+function showTrainingResults() {
+  document.getElementById('trainingArea').style.display = 'none';
+  const pct = Math.round((trainingScore / trainingWords.length) * 100);
+  let emoji = pct >= 80 ? '🏆' : pct >= 50 ? '👍' : '💪';
+  let msg = pct >= 80 ? 'Excellent travail !' : pct >= 50 ? 'Bon début, continue !' : 'Continue à pratiquer !';
+
+  document.getElementById('trainingScore').style.display = 'block';
+  document.getElementById('trainingScore').innerHTML = `
+    <div style="font-size:3rem;margin-bottom:10px;">${emoji}</div>
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">${trainingScore}/${trainingWords.length}</div>
+    <div style="color:var(--text-muted);margin:8px 0 20px;">${msg}</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="startTraining()">🔄 Recommencer avec nouveaux mots</button>
+      <button class="btn btn-secondary btn-sm" onclick="reviewMissed()">📋 Revoir les difficiles</button>
+    </div>`;
+
+  addXP(trainingScore * 5, 'Entraînement phonétique terminé');
+}
+
+// === REVIEW MISSED ===
+function reviewMissed() {
+  notify('Recharge un entraînement pour revoir les sons difficiles !');
+}
+
 // === PRONUNCIATION PRACTICE ===
 async function practicePronunciation() {
   const word = document.getElementById('pronunInput').value.trim();
   if (!word) return;
 
-  // Speak the word
   speakWord(word);
 
   const result = document.getElementById('pronunResult');
   result.style.display = 'block';
   result.innerHTML = '<div class="loader"><span></span><span></span><span></span></div>';
 
-  const system = `You are a French-English phonetics teacher. 
-For the given English word, provide in French:
-1. La prononciation en phonétique internationale (IPA)
-2. Comment prononcer chaque partie du mot (en utilisant des mots français similaires comme référence)
-3. Les erreurs courantes des francophones pour ce mot
-4. 2 autres mots anglais avec le même son difficile
-
-Sois concis et pratique. Format clair avec des emojis.`;
+  const system = `Tu es un professeur de phonétique anglaise pour francophones.
+Pour le mot anglais donné, explique en français :
+1. 🔤 Prononciation IPA
+2. 👄 Comment le dire syllabe par syllabe (avec sons français comme référence)
+3. ⚠️ Le piège principal pour un francophone
+4. 🔁 Orthographe phonétique française : ex "WEURDE"
+5. 📝 2 autres mots avec le même son difficile
+Sois clair, pratique et encourageant.`;
 
   try {
     const reply = await callClaude(system, word);
     result.innerHTML = reply.replace(/\n/g, '<br>');
-    addXP(10, 'Exercice phonétique');
+    addXP(10, 'Analyse phonétique');
   } catch(e) {
     result.innerHTML = 'Erreur. Réessaie !';
   }
