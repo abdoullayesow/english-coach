@@ -565,6 +565,9 @@
     <button class="tab" onclick="showTab('vocabulary')">
       <span class="tab-icon">📚</span><span class="tab-text">Vocabulaire</span>
     </button>
+    <button class="tab" onclick="showTab('phonetics')">
+      <span class="tab-icon">🔊</span><span class="tab-text">Phonétique</span>
+    </button>
   </div>
 
   <!-- CONVERSATION TAB -->
@@ -628,9 +631,11 @@
         <option value="short story">Nouvelle courte</option>
       </select>
 
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="generateText()" id="genTextBtn">📝 Générer un texte</button>
         <button class="btn btn-secondary btn-sm" onclick="translateAll()">🇫🇷 Tout traduire</button>
+        <button class="btn btn-secondary btn-sm" onclick="speakText()" id="speakBtn" style="display:none;">🔊 Écouter</button>
+        <button class="btn btn-secondary btn-sm" onclick="stopSpeech()" id="stopBtn" style="display:none;">⏹ Stop</button>
       </div>
 
       <div class="text-display" id="readingText">
@@ -719,6 +724,41 @@
       <div id="flashcardArea">
         <div style="color:var(--text-muted);font-style:italic;">Charge d'abord le vocabulaire ci-dessus.</div>
       </div>
+    </div>
+  </div>
+
+  <!-- PHONETICS TAB -->
+  <div id="tab-phonetics" class="panel">
+    <div class="card">
+      <div class="card-title">🔊 Les 44 sons de l'anglais (Phonics)</div>
+      <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">
+        Clique sur chaque son pour l'entendre et voir des exemples. C'est la base pour lire l'anglais correctement !
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent2);margin-bottom:10px;font-size:0.9rem;">🔴 VOYELLES (Vowel sounds)</div>
+        <div class="vocab-grid" id="vowelGrid"></div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);margin-bottom:10px;font-size:0.9rem;">🔵 CONSONNES (Consonant sounds)</div>
+        <div class="vocab-grid" id="consonantGrid"></div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent3);margin-bottom:10px;font-size:0.9rem;">🟢 COMBINAISONS SPÉCIALES (Digraphs)</div>
+        <div class="vocab-grid" id="digraphGrid"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎯 Entraînement à la prononciation</div>
+      <div style="color:var(--text-muted);font-size:0.85rem;margin-bottom:14px;">Entre un mot anglais et écoute comment il se prononce, puis entraîne-toi à le répéter !</div>
+      <div class="input-row" style="margin-bottom:12px;">
+        <input type="text" id="pronunInput" placeholder="Ex: though, through, beauty, world..." />
+        <button class="btn btn-primary" onclick="practicePronunciation()">🔊 Écouter</button>
+      </div>
+      <div id="pronunResult" style="display:none;background:var(--surface2);border-radius:14px;padding:16px;border-left:3px solid var(--accent);font-size:0.9rem;line-height:1.7;"></div>
     </div>
   </div>
 
@@ -1239,6 +1279,175 @@ function showFlashcard() {
       <div style="color:var(--text-muted);font-size:0.75rem;margin-top:10px;">${(flashIndex % currentVocab.length) + 1} / ${currentVocab.length}</div>
     </div>`;
 }
+
+// === SPEECH SYNTHESIS (Text to Speech) ===
+let speechSynth = window.speechSynthesis;
+let currentUtterance = null;
+
+function speakText() {
+  if (!currentReadingText) return;
+  stopSpeech();
+  const cleanText = currentReadingText.replace(/<[^>]*>/g, '');
+  currentUtterance = new SpeechSynthesisUtterance(cleanText);
+  currentUtterance.lang = 'en-US';
+  currentUtterance.rate = 0.85;
+  currentUtterance.pitch = 1;
+
+  // Try to find a good English voice
+  const voices = speechSynth.getVoices();
+  const engVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
+    || voices.find(v => v.lang.startsWith('en-US'))
+    || voices.find(v => v.lang.startsWith('en'));
+  if (engVoice) currentUtterance.voice = engVoice;
+
+  currentUtterance.onstart = () => {
+    document.getElementById('speakBtn').textContent = '🔊 En cours...';
+    document.getElementById('stopBtn').style.display = 'inline-flex';
+  };
+  currentUtterance.onend = () => {
+    document.getElementById('speakBtn').textContent = '🔊 Écouter';
+    document.getElementById('stopBtn').style.display = 'none';
+  };
+
+  speechSynth.speak(currentUtterance);
+}
+
+function stopSpeech() {
+  speechSynth.cancel();
+  const sb = document.getElementById('speakBtn');
+  const stb = document.getElementById('stopBtn');
+  if (sb) sb.textContent = '🔊 Écouter';
+  if (stb) stb.style.display = 'none';
+}
+
+function speakWord(word) {
+  stopSpeech();
+  const utt = new SpeechSynthesisUtterance(word);
+  utt.lang = 'en-US';
+  utt.rate = 0.8;
+  const voices = speechSynth.getVoices();
+  const engVoice = voices.find(v => v.lang.startsWith('en-US')) || voices.find(v => v.lang.startsWith('en'));
+  if (engVoice) utt.voice = engVoice;
+  speechSynth.speak(utt);
+}
+
+// Show audio button when text is generated
+const _origMakeInteractive = makeInteractiveText;
+function makeInteractiveText(text) {
+  _origMakeInteractive(text);
+  document.getElementById('speakBtn').style.display = 'inline-flex';
+}
+
+// === PHONETICS DATA ===
+const vowelSounds = [
+  { symbol: '/æ/', name: 'short a', examples: 'cat, hat, bag', color: '#ff6584' },
+  { symbol: '/eɪ/', name: 'long a', examples: 'cake, rain, day', color: '#ff6584' },
+  { symbol: '/ɛ/', name: 'short e', examples: 'bed, red, set', color: '#ff8c69' },
+  { symbol: '/iː/', name: 'long e', examples: 'see, eat, team', color: '#ff8c69' },
+  { symbol: '/ɪ/', name: 'short i', examples: 'sit, big, fish', color: '#ffb347' },
+  { symbol: '/aɪ/', name: 'long i', examples: 'bike, night, fly', color: '#ffb347' },
+  { symbol: '/ɒ/', name: 'short o', examples: 'hot, dog, stop', color: '#ffd700' },
+  { symbol: '/oʊ/', name: 'long o', examples: 'boat, snow, go', color: '#ffd700' },
+  { symbol: '/ʌ/', name: 'short u', examples: 'cup, run, fun', color: '#90EE90' },
+  { symbol: '/juː/', name: 'long u', examples: 'cute, use, few', color: '#90EE90' },
+  { symbol: '/ɑː/', name: 'ar sound', examples: 'car, star, farm', color: '#87ceeb' },
+  { symbol: '/ɔː/', name: 'or sound', examples: 'born, door, more', color: '#87ceeb' },
+  { symbol: '/ʊ/', name: 'oo short', examples: 'book, look, good', color: '#dda0dd' },
+  { symbol: '/uː/', name: 'oo long', examples: 'moon, food, blue', color: '#dda0dd' },
+  { symbol: '/aʊ/', name: 'ow sound', examples: 'cow, out, now', color: '#f0e68c' },
+  { symbol: '/ɔɪ/', name: 'oy sound', examples: 'boy, coin, toy', color: '#f0e68c' },
+];
+
+const consonantSounds = [
+  { symbol: '/b/', name: 'b', examples: 'ball, baby, rob', color: '#6c63ff' },
+  { symbol: '/d/', name: 'd', examples: 'dog, day, bird', color: '#6c63ff' },
+  { symbol: '/f/', name: 'f', examples: 'fish, phone, off', color: '#7c73ff' },
+  { symbol: '/g/', name: 'g', examples: 'go, big, frog', color: '#7c73ff' },
+  { symbol: '/h/', name: 'h', examples: 'hat, hello, behind', color: '#8c83ff' },
+  { symbol: '/dʒ/', name: 'j', examples: 'jump, age, gym', color: '#8c83ff' },
+  { symbol: '/k/', name: 'k/c', examples: 'cat, king, back', color: '#9c93ff' },
+  { symbol: '/l/', name: 'l', examples: 'leg, fly, bell', color: '#9c93ff' },
+  { symbol: '/m/', name: 'm', examples: 'man, swim, drum', color: '#ac93ff' },
+  { symbol: '/n/', name: 'n', examples: 'net, fun, sun', color: '#ac93ff' },
+  { symbol: '/p/', name: 'p', examples: 'pig, happy, stop', color: '#bc93ff' },
+  { symbol: '/r/', name: 'r', examples: 'run, very, car', color: '#bc93ff' },
+  { symbol: '/s/', name: 's', examples: 'sun, city, bus', color: '#cc93ff' },
+  { symbol: '/t/', name: 't', examples: 'top, city, bat', color: '#cc93ff' },
+  { symbol: '/v/', name: 'v', examples: 'van, over, love', color: '#dc93ff' },
+  { symbol: '/w/', name: 'w', examples: 'win, away, queen', color: '#dc93ff' },
+  { symbol: '/j/', name: 'y', examples: 'yes, you, beyond', color: '#ec93ff' },
+  { symbol: '/z/', name: 'z', examples: 'zip, nose, buzz', color: '#ec93ff' },
+];
+
+const digraphSounds = [
+  { symbol: '/ʃ/', name: 'sh', examples: 'ship, wish, action', color: '#43e97b' },
+  { symbol: '/tʃ/', name: 'ch', examples: 'chin, watch, teach', color: '#43e97b' },
+  { symbol: '/θ/', name: 'th soft', examples: 'think, bath, tooth', color: '#38d9a9' },
+  { symbol: '/ð/', name: 'th hard', examples: 'the, this, father', color: '#38d9a9' },
+  { symbol: '/ŋ/', name: 'ng', examples: 'sing, ring, long', color: '#20c997' },
+  { symbol: '/ʒ/', name: 'zh', examples: 'measure, vision, genre', color: '#20c997' },
+  { symbol: '/ə/', name: 'schwa', examples: 'about, taken, circus', color: '#12b886' },
+];
+
+function buildPhoneticCard(sound) {
+  return `<div class="vocab-card" onclick="speakPhonetic('${sound.examples.split(',')[0].trim()}', this)" style="border-color:${sound.color}22;cursor:pointer;">
+    <div style="font-size:1.4rem;font-weight:800;color:${sound.color};font-family:'Syne',sans-serif;">${sound.symbol}</div>
+    <div style="font-size:0.78rem;color:var(--text-muted);margin:2px 0;">${sound.name}</div>
+    <div style="font-size:0.75rem;color:var(--text);margin-top:6px;">${sound.examples}</div>
+    <div style="font-size:0.7rem;color:${sound.color};margin-top:4px;">🔊 Clique pour écouter</div>
+  </div>`;
+}
+
+function speakPhonetic(word, el) {
+  speakWord(word);
+  el.style.transform = 'scale(0.96)';
+  setTimeout(() => el.style.transform = '', 200);
+}
+
+function initPhonetics() {
+  document.getElementById('vowelGrid').innerHTML = vowelSounds.map(buildPhoneticCard).join('');
+  document.getElementById('consonantGrid').innerHTML = consonantSounds.map(buildPhoneticCard).join('');
+  document.getElementById('digraphGrid').innerHTML = digraphSounds.map(buildPhoneticCard).join('');
+}
+
+// Load voices and init phonetics on page load
+window.addEventListener('load', () => {
+  speechSynth.getVoices();
+  setTimeout(initPhonetics, 500);
+});
+
+speechSynth.onvoiceschanged = initPhonetics;
+
+// === PRONUNCIATION PRACTICE ===
+async function practicePronunciation() {
+  const word = document.getElementById('pronunInput').value.trim();
+  if (!word) return;
+
+  // Speak the word
+  speakWord(word);
+
+  const result = document.getElementById('pronunResult');
+  result.style.display = 'block';
+  result.innerHTML = '<div class="loader"><span></span><span></span><span></span></div>';
+
+  const system = `You are a French-English phonetics teacher. 
+For the given English word, provide in French:
+1. La prononciation en phonétique internationale (IPA)
+2. Comment prononcer chaque partie du mot (en utilisant des mots français similaires comme référence)
+3. Les erreurs courantes des francophones pour ce mot
+4. 2 autres mots anglais avec le même son difficile
+
+Sois concis et pratique. Format clair avec des emojis.`;
+
+  try {
+    const reply = await callClaude(system, word);
+    result.innerHTML = reply.replace(/\n/g, '<br>');
+    addXP(10, 'Exercice phonétique');
+  } catch(e) {
+    result.innerHTML = 'Erreur. Réessaie !';
+  }
+}
+
 </script>
 </body>
 </html>
